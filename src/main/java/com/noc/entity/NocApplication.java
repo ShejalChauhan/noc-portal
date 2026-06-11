@@ -161,6 +161,12 @@ public class NocApplication {
     private String finalAuthFile = "";
 
     @Column(nullable = false)
+    private String currentRole = "CIVILIAN";
+
+    @Column(nullable = false)
+    private String currentStatus = "SUBMITTED";
+
+    @Column(nullable = false)
     private LocalDateTime createdDateTime = LocalDateTime.now();
 
     private LocalDateTime updateDateTime;
@@ -168,6 +174,12 @@ public class NocApplication {
     private String userId;
 
     // Getters and Setters
+    public String getCurrentRole() { return currentRole; }
+    public void setCurrentRole(String currentRole) { this.currentRole = currentRole; }
+
+    public String getCurrentStatus() { return currentStatus; }
+    public void setCurrentStatus(String currentStatus) { this.currentStatus = currentStatus; }
+
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 

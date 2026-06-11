@@ -32,65 +32,74 @@ public class NocReviewService {
     @Autowired
     private NocTypeRepository nocTypeRepository;
 
+    @Autowired
+    private WorkflowService workflowService;
+
     private final String uploadDir = "uploads";
 
     @Transactional
-    public void forwardApplication(String applicationId, MultipartFile file1, MultipartFile file2, String remark) throws IOException {
+    public NocApplication forwardApplication(String applicationId, MultipartFile file1, MultipartFile file2, String remark, String currentRole) throws IOException {
         NocApplication app = applicationRepository.findByApplicationId(applicationId)
                 .orElseThrow(() -> new IllegalArgumentException("Application not found: " + applicationId));
 
-        // Create upload directory if it doesn't exist
-        Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-        }
+        // Get next role
+        String nextRole = workflowService.getNextRole(currentRole, "FORWARD");
 
         // Save files
         String file1Name = saveFile(file1);
         String file2Name = saveFile(file2);
 
-        // Store metadata in NocApplicationReview
+        // Store history in NocApplicationReview
         NocApplicationReview review = new NocApplicationReview();
         review.setApplicationId(applicationId);
         review.setRemarks(remark);
         review.setForwardEmployeeDoc(file1Name);
         review.setDscDocumentPath(file2Name);
-        review.setStatus("Forwarded");
+        review.setStatus("Forwarded to " + nextRole);
+        review.setReviewedBy(currentRole);
+        review.setForwardEmployee(nextRole);
         review.setCreatedDateTime(LocalDateTime.now());
         review.setReviewedDateTime(LocalDateTime.now());
         
-        // Get departmentId from NocType
+        // Update app workflow
+        app.setCurrentRole(nextRole);
+        app.setCurrentStatus("Forwarded to " + nextRole);
+        app.setUpdateDateTime(LocalDateTime.now());
+
         Integer deptId = getDepartmentIdFromApp(app);
         review.setDepartmentId(deptId);
 
-        app.setStatus("Forwarded");
-        app.setUpdateDateTime(LocalDateTime.now());
-        
         applicationRepository.save(app);
         reviewRepository.save(review);
+        
+        return app;
     }
 
     @Transactional
-    public void rejectApplication(String applicationId, String remark) {
+    public NocApplication rejectApplication(String applicationId, String remark, String currentRole) {
         NocApplication app = applicationRepository.findByApplicationId(applicationId)
                 .orElseThrow(() -> new IllegalArgumentException("Application not found: " + applicationId));
 
-        // Store metadata in NocApplicationReview
+        // Save rejection
         NocApplicationReview review = new NocApplicationReview();
         review.setApplicationId(applicationId);
         review.setRemarks(remark);
         review.setStatus("Rejected");
+        review.setReviewedBy(currentRole);
         review.setCreatedDateTime(LocalDateTime.now());
         review.setReviewedDateTime(LocalDateTime.now());
+
+        app.setCurrentRole("CIVILIAN");
+        app.setCurrentStatus("Rejected");
+        app.setUpdateDateTime(LocalDateTime.now());
 
         Integer deptId = getDepartmentIdFromApp(app);
         review.setDepartmentId(deptId);
 
-        app.setStatus("Rejected");
-        app.setUpdateDateTime(LocalDateTime.now());
-        
         applicationRepository.save(app);
         reviewRepository.save(review);
+        
+        return app;
     }
 
     private Integer getDepartmentIdFromApp(NocApplication app) {

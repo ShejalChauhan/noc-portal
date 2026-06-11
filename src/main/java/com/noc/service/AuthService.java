@@ -24,6 +24,13 @@ public class AuthService {
     @Autowired
     private DepartmentRepository departmentRepository;
 
+    @Autowired
+    private TokenBlacklistService blacklistService;
+
+    public void logout(String token) {
+        blacklistService.blacklistToken(token);
+    }
+
     public Map<String, Object> authenticate(String roleId, String username, String password) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);
